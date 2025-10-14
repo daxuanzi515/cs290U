@@ -60,7 +60,7 @@ class BasicDataset(Dataset):
 
     def __len__(self):
         return len(self.ids)
-
+    
     @staticmethod
     def preprocess(mask_values, pil_img, scale, is_mask):
         w, h = pil_img.size
@@ -70,24 +70,29 @@ class BasicDataset(Dataset):
         img = np.asarray(pil_img)
 
         if is_mask:
-            mask = np.zeros((newH, newW), dtype=np.int64)
-            for i, v in enumerate(mask_values):
-                if img.ndim == 2:
+            # 二值化或多分类处理
+            if img.ndim == 3:
+                img = img[..., 0]  # 若 mask 是 RGB，取单通道
+            if (img > 1).any():
+                img = img / 255.0
+            # 自动判断二分类 or 多分类
+            unique_vals = np.unique(img)
+            if len(unique_vals) <= 2:
+                img = (img > 0.5).astype(np.float32)
+            else:
+                # 将 mask 映射为类别索引
+                mask = np.zeros((newH, newW), dtype=np.int64)
+                for i, v in enumerate(mask_values):
                     mask[img == v] = i
-                else:
-                    mask[(img == v).all(-1)] = i
-
-            return mask
-
+                img = mask
+            return img
         else:
             if img.ndim == 2:
                 img = img[np.newaxis, ...]
             else:
                 img = img.transpose((2, 0, 1))
-
             if (img > 1).any():
                 img = img / 255.0
-
             return img
 
     def __getitem__(self, idx):
@@ -100,18 +105,95 @@ class BasicDataset(Dataset):
         mask = load_image(mask_file[0])
         img = load_image(img_file[0])
 
-        assert img.size == mask.size, \
-            f'Image and mask {name} should be the same size, but are {img.size} and {mask.size}'
+        assert img.size == mask.size, f'Image and mask {name} should be the same size, but are {img.size} and {mask.size}'
 
         img = self.preprocess(self.mask_values, img, self.scale, is_mask=False)
         mask = self.preprocess(self.mask_values, mask, self.scale, is_mask=True)
 
+        # 自动选择 mask 类型
+        mask_tensor = torch.as_tensor(mask.copy())
+        if mask_tensor.max() <= 1:
+            mask_tensor = mask_tensor.float()
+        else:
+            mask_tensor = mask_tensor.long()
+
         return {
             'image': torch.as_tensor(img.copy()).float().contiguous(),
-            'mask': torch.as_tensor(mask.copy()).long().contiguous()
+            'mask': mask_tensor.contiguous()
         }
 
+
+    # @staticmethod
+    # def preprocess(mask_values, pil_img, scale, is_mask):
+    #     w, h = pil_img.size
+    #     newW, newH = int(scale * w), int(scale * h)
+    #     assert newW > 0 and newH > 0, 'Scale is too small, resized images would have no pixel'
+    #     pil_img = pil_img.resize((newW, newH), resample=Image.NEAREST if is_mask else Image.BICUBIC)
+    #     img = np.asarray(pil_img)
+
+    #     if is_mask:
+    #         mask = np.zeros((newH, newW), dtype=np.int64)
+    #         for i, v in enumerate(mask_values):
+    #             if img.ndim == 2:
+    #                 mask[img == v] = i
+    #             else:
+    #                 mask[(img == v).all(-1)] = i
+
+    #         return mask
+
+    #     else:
+    #         if img.ndim == 2:
+    #             img = img[np.newaxis, ...]
+    #         else:
+    #             img = img.transpose((2, 0, 1))
+
+    #         if (img > 1).any():
+    #             img = img / 255.0
+
+    #         return img
+
+    # def __getitem__(self, idx):
+    #     name = self.ids[idx]
+    #     mask_file = list(self.mask_dir.glob(name + self.mask_suffix + '.*'))
+    #     img_file = list(self.images_dir.glob(name + '.*'))
+
+    #     assert len(img_file) == 1, f'Either no image or multiple images found for the ID {name}: {img_file}'
+    #     assert len(mask_file) == 1, f'Either no mask or multiple masks found for the ID {name}: {mask_file}'
+    #     mask = load_image(mask_file[0])
+    #     img = load_image(img_file[0])
+
+    #     assert img.size == mask.size, \
+    #         f'Image and mask {name} should be the same size, but are {img.size} and {mask.size}'
+
+    #     img = self.preprocess(self.mask_values, img, self.scale, is_mask=False)
+    #     mask = self.preprocess(self.mask_values, mask, self.scale, is_mask=True)
+
+    #     return {
+    #         'image': torch.as_tensor(img.copy()).float().contiguous(),
+    #         'mask': torch.as_tensor(mask.copy()).long().contiguous()
+    #     }
+
+
+# class CarvanaDataset(BasicDataset):
+#     def __init__(self, images_dir, mask_dir, scale=1):
+#         super().__init__(images_dir, mask_dir, scale, mask_suffix='_mask')
 
 class CarvanaDataset(BasicDataset):
     def __init__(self, images_dir, mask_dir, scale=1):
         super().__init__(images_dir, mask_dir, scale, mask_suffix='_mask')
+
+    def __getitem__(self, idx):
+        data = super().__getitem__(idx)
+        img, mask = data['image'], data['mask']
+
+        # ✅ 强制归一化（防止未被除以255）
+        if img.max() > 1.0:
+            img = img / 255.0
+
+        # ✅ mask 归一化成 float {0,1}
+        if mask.max() > 1.0:
+            mask = (mask / 255.0).float()
+        else:
+            mask = mask.float()
+
+        return {'image': img.float().contiguous(), 'mask': mask.contiguous()}

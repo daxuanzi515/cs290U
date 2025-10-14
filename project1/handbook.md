@@ -64,6 +64,7 @@
 
    * 学习率（learning rate）
    * 批大小（batch size）
+   
 4. 达到稳定训练后：
 
    * 在验证集上评估 Dice score；

@@ -9,7 +9,7 @@ from utils.dice_score import multiclass_dice_coeff, dice_coeff
 def evaluate(net, dataloader, device, amp):
     net.eval()
     num_val_batches = len(dataloader)
-    dice_score = 0
+    dice_score = 0.0
 
     # iterate over the validation set
     with torch.autocast(device.type if device.type != 'mps' else 'cpu', enabled=amp):
@@ -25,16 +25,31 @@ def evaluate(net, dataloader, device, amp):
 
             if net.n_classes == 1:
                 assert mask_true.min() >= 0 and mask_true.max() <= 1, 'True mask indices should be in [0, 1]'
-                mask_pred = (F.sigmoid(mask_pred) > 0.5).float()
-                # compute the Dice score
+                mask_pred = (torch.sigmoid(mask_pred) > 0.5).float()
+
+                # ⚙️ 如果 target 没有通道维度，就 unsqueeze 一下
+                if mask_true.ndim == 3:
+                    mask_true = mask_true.unsqueeze(1)
+
                 dice_score += dice_coeff(mask_pred, mask_true, reduce_batch_first=False)
+
             else:
-                assert mask_true.min() >= 0 and mask_true.max() < net.n_classes, 'True mask indices should be in [0, n_classes['
+                assert mask_true.min() >= 0 and mask_true.max() < net.n_classes, \
+                    'True mask indices should be in [0, n_classes['
                 # convert to one-hot format
                 mask_true = F.one_hot(mask_true, net.n_classes).permute(0, 3, 1, 2).float()
                 mask_pred = F.one_hot(mask_pred.argmax(dim=1), net.n_classes).permute(0, 3, 1, 2).float()
+
                 # compute the Dice score, ignoring background
                 dice_score += multiclass_dice_coeff(mask_pred[:, 1:], mask_true[:, 1:], reduce_batch_first=False)
 
     net.train()
-    return dice_score / max(num_val_batches, 1)
+
+    # ✅ 确保 dice_score 是标量（防止 RuntimeError: a Tensor with多个元素）
+    if isinstance(dice_score, torch.Tensor):
+        dice_score = dice_score.mean()
+
+    # ✅ 对验证 batch 求平均，防止 Dice 值过大（正确范围应在 0~1）
+    dice_score = dice_score / max(num_val_batches, 1)
+
+    return dice_score.item()

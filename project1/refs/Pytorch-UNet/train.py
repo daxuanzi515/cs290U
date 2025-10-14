@@ -77,7 +77,9 @@ def train_model(
     optimizer = optim.RMSprop(model.parameters(),
                               lr=learning_rate, weight_decay=weight_decay, momentum=momentum, foreach=True)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=5)  # goal: maximize Dice score
-    grad_scaler = torch.cuda.amp.GradScaler(enabled=amp)
+    grad_scaler = torch.cuda.amp.GradScaler(enabled=amp) # 2.0.1
+    # grad_scaler = torch.cuda.amp.GradScaler('cuda', enabled=amp) # >=2.3
+    
     criterion = nn.CrossEntropyLoss() if model.n_classes > 1 else nn.BCEWithLogitsLoss()
     global_step = 0
 
@@ -139,10 +141,17 @@ def train_model(
                             if not (torch.isinf(value.grad) | torch.isnan(value.grad)).any():
                                 histograms['Gradients/' + tag] = wandb.Histogram(value.grad.data.cpu())
 
+                        # val_score = evaluate(model, val_loader, device, amp)
+                        # scheduler.step(val_score)
                         val_score = evaluate(model, val_loader, device, amp)
+                        if isinstance(val_score, torch.Tensor):
+                            val_score = val_score.item()
                         scheduler.step(val_score)
 
-                        logging.info('Validation Dice score: {}'.format(val_score))
+
+                        # logging.info('Validation Dice score: {}'.format(val_score))
+                        logging.info(f'Validation Dice score: {val_score:.4f}')
+
                         try:
                             experiment.log({
                                 'learning rate': optimizer.param_groups[0]['lr'],
