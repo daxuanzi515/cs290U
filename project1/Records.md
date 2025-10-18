@@ -161,7 +161,6 @@ wandb:
 wandb: Synced youthful-fog-14: https://wandb.ai/anony-moose-936971435980722001/U-Net/runs/tqf0in2g?apiKey=182d6e29a2d95ce26517c966f60310e666db4e27
 wandb: Synced 6 W&B file(s), 75 media file(s), 0 artifact file(s) and 0 other file(s)
 wandb: Find logs at: ./wandb/run-20251013_213629-tqf0in2g/logs
-
 ```
 
 -----
@@ -176,8 +175,24 @@ python predict.py \
   --classes 1 \
   --scale 0.5
 ```
+---
+Results:
+
+测试图均来源于网络，仅供参考。
+
+|  No.  |                Original Image                |                Segmented Result                |
+| :---: | :------------------------------------------: | :--------------------------------------------: |
+|  car1 |  ![car1](./refs/Pytorch-UNet/data/custom_data/car1.jpg)  |  ![car1\_mask](./refs/Pytorch-UNet/data/custom_data/car1_OUT.png)  |
+|  car2 |  ![car2](./refs/Pytorch-UNet/data/custom_data/car2.jpg)  |  ![car2\_mask](./refs/Pytorch-UNet/data/custom_data/car2_OUT.png)  |
+|  car3 |  ![car3](./refs/Pytorch-UNet/data/custom_data/car3.jpg)  |  ![car3\_mask](./refs/Pytorch-UNet/data/custom_data/car3_OUT.png)  |
+|  ... |  ...  |  ...  |
+|  car10 |  ![car10](./refs/Pytorch-UNet/data/custom_data/car10.jpg)  |  ![car10\_mask](./refs/Pytorch-UNet/data/custom_data/car10_OUT.png)  |
 
 
+小结：
+通过结果，可以看出这里的分割效果并不理想，没有识别出车辆的主体，而是把所有的图里的物体都分割出来了，训练集的图只是提供了车主体的单一图，遇到多背景的情况就识别不出来了，并且只是从图片合集里学习到了每张图里像素的相似性，没有学习到车辆的实际含义和图片的关系。
+
+# Advanced Task
 ## SAM 1
 下载三个不同维度的权重：
 - https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
@@ -197,7 +212,7 @@ python /home/cxx/HWs/CS290U/project1/refs/segment-anything/scripts/amg.py \
     --convert-to-rle
 ```
 
-用脚本叠加mask到原图并copy成新图：
+用脚本叠加mask到原图并copy成新图：(project1/refs/segment-anything/scripts/mask_add.py)
 ```shell
 python scripts/mask_add.py \
   --image /home/cxx/HWs/CS290U/project1/refs/segment-anything/data/car1.jpg \
@@ -205,8 +220,103 @@ python scripts/mask_add.py \
   --output /home/cxx/HWs/CS290U/project1/refs/segment-anything/outputs/cars/car1_overlay.jpg
 ```
 
-批量脚本：
+批量脚本：(project1/refs/segment-anything/test.sh)
 ```shell
 chmod +x /home/cxx/HWs/CS290U/project1/refs/segment-anything/test.sh
 bash /home/cxx/HWs/CS290U/project1/refs/segment-anything/test.sh
 ```
+
+判断结果是否符合SAM定义的标准：(project1/refs/segment-anything/scripts/summarize.py)
+```shell
+python scripts/summarize.py \
+  --input-dir /home/cxx/HWs/CS290U/project1/refs/segment-anything/outputs/cars \
+  --output-csv /home/cxx/HWs/CS290U/project1/refs/segment-anything/outputs/summary.csv
+```
+SAM 1 (Segment Anything Model) 的目标是实现 通用几何分割（generic instance segmentation），
+而非语义特定分割（semantic segmentation）。
+它追求的是「把所有可能有边界的区域都找出来」，而不是「找到特定语义的掩膜」。
+所以这里的评分是很高的，但是针对的是多目标分割；
+针对车的语义分割并不是很好。
+
+----
+Results:
+
+测试图均来源于网络，仅供参考。
+
+|  No.  |                Original Image                |                Segmented Result                |
+| :---: | :------------------------------------------: | :--------------------------------------------: |
+|  car1 |  ![car1](./refs/segment-anything/data/car1.jpg)  |  ![car1\_mask](./refs/segment-anything/outputs/cars/car1_overlay.jpg)  |
+|  car2 |  ![car2](./refs/segment-anything/data/car2.jpg)  |  ![car2\_mask](./refs/segment-anything/outputs/cars/car2_overlay.jpg)  |
+|  car3 |  ![car3](./refs/segment-anything/data/car3.jpg)  |  ![car3\_mask](./refs/segment-anything/outputs/cars/car3_overlay.jpg)  |
+|  ... |  ...  |  ...  |
+|  car25 |  ![car25](./refs/segment-anything/data/car25.jpg)  |  ![car25\_mask](./refs/segment-anything/outputs/cars/car25_overlay.jpg)  |
+
+小结：
+SAM1 实现了通用几何分割，但针对车的语义分割并不是很好。multi-mask能划分出更多的区域，但也会导致主体过多。
+
+
+## GroundingDINO + SAM
+
+下载DINO的权重：
+https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha/groundingdino_swint_ogc.pth
+
+降级`numpy` < 2.0: 
+```shell
+pip install "numpy<2.0" --force-reinstall
+python3 test.py
+```
+
+### Trouble Shooting
+Bugs:
+```shell
+NameError: name '_C' is not defined
+```
+
+Solution: check nvcc and home path.
+```shell
+echo $CUDA_HOME
+# possible FIXED method
+pip install torch==2.2.2 torchvision==0.17.2 torchaudio==2.2.2
+
+cd /home/cxx/HWs/CS290U/project1/refs/GroundingDINO
+pip install -e .
+```
+
+combine.py: 先用DINO来预测和语义有关的框，再用SAM来进行分割区域
+
+单例测试：(project1/refs/GroundingDINO/combine.py)
+```shell
+python combine.py \
+   --dino-config groundingdino/config/GroundingDINO_SwinT_OGC.py \
+   --dino-weights models/groundingdino_swint_ogc.pth \
+   --sam-weights ../segment-anything/models/sam_vit_h_4b8939.pth \
+   --image ../segment-anything/data/car1.jpg \
+   --text "car, vehicle, automobile, wheel, window" \
+   --output outputs/cars \
+   --box-thresh 0.2 \
+   --text-thresh 0.2 \
+   --multimask 1
+```
+
+多样例测试：（project1/refs/GroundingDINO/test.sh）
+```shell
+cd /home/cxx/HWs/CS290U/project1/refs/GroundingDINO
+chmod +x test.sh
+./test.sh
+```
+---
+Results:
+
+测试图均来源于网络，仅供参考。
+
+|  No.  |                Original Image                |                Segmented Result                |
+| :---: | :------------------------------------------: | :----------: |
+|  car1 |  ![car1](./refs/GroundingDINO/outputs/cars/car1_dino_box.jpg)  |  ![car1\_mask](./refs/GroundingDINO/outputs/cars/car1_overlay.jpg)  |
+|  car2 |  ![car2](./refs/GroundingDINO/outputs/cars/car2_dino_box.jpg)  |  ![car2\_mask](./refs/GroundingDINO/outputs/cars/car2_overlay.jpg)  |
+|  car3 |  ![car3](./refs/GroundingDINO/outputs/cars/car3_dino_box.jpg)  |  ![car3\_mask](./refs/GroundingDINO/outputs/cars/car3_overlay.jpg)  |
+|  ... |  ...  |  ...  |
+|  car25 |  ![car25](./refs/GroundingDINO/outputs/cars/car25_dino_box.jpg)  |  ![car25\_mask](./refs/GroundingDINO/outputs/cars/car25_overlay.jpg)  |
+----
+小结：
+通过先在图片中使用提示词来用DINO预测框，定位目标物体，之后再用SAM进行区域分割，可以实现用语义信息来分割目标物体。
+可以从图片结果看出，之前多目标区域分割的结果已经被集中到车有关的区域上了。这里使用的提示词是：car, vehicle, automobile, wheel, window，可以尝试其他的提示词来测试更多的效果。

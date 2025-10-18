@@ -13,6 +13,7 @@ __pycache__/
 # Distribution / packaging
 .Python
 build/
+models/
 develop-eggs/
 dist/
 downloads/
@@ -135,7 +136,7 @@ dmypy.json
 # vscode
 .vscode/
 output/
-outputs/
+# outputs/
 subs/
 logs/
 
