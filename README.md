@@ -1,6 +1,6 @@
 # README
 
-Some Records Here.
+Some Records Here. (ShanghaiTech CS290U Course in Autumn 2025.)
 
 - See project1: [proj1](project1/readme.md)
 - See project2: [proj2](project2/readme.md)
