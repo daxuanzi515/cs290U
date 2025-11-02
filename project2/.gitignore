@@ -1,0 +1,7 @@
+*.npy
+*.npz
+*.pth
+*.pt
+datasets/GS
+datasets/Matrix
+*.mp4
