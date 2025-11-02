@@ -9,4 +9,3 @@ data/depth
 data/rgb
 data/test_data
 refs/colmap
-*.db

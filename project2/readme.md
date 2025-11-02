@@ -248,3 +248,27 @@ pip install pygltflib
 ```
 python refs/mast3r/demo.py --model_name MASt3R_ViTLarge_BaseDecoder_512_catmlpdpt_metric
 python refs/mast3r/demo_dust3r_ga.py --model_name MASt3R_ViTLarge_BaseDecoder_512_catmlpdpt_metric
+
+
+| **Dataset**              | **Model** | **AUC@5** | **AUC@10** | **AUC@20** | **Prec** | **MScore / MError** |
+| ------------------------ | --------- | --------: | ---------: | ---------: | -------: | ------------------: |
+| **Aerial_h (nadir)**     | SuperGlue |     17.99 |      26.35 |      32.59 |    25.58 |                8.44 |
+|                          | MASt3R    |     98.37 |      99.59 |          – |    98.37 |             3.14 px |
+|                          | VGGT      |     99.81 |      99.92 |      99.96 |    99.64 |             0.92 px |
+| **Aerial_q (oblique)**   | SuperGlue |     18.02 |      27.95 |      34.62 |    22.98 |                7.99 |
+|                          | MASt3R    |     97.19 |      99.36 |          – |    97.19 |             3.41 px |
+|                          | VGGT      |     99.58 |      99.77 |      99.92 |    99.30 |             1.07 px |
+| **Street_cam1 (ground)** | SuperGlue |     15.29 |      40.60 |      65.43 |    31.77 |               13.02 |
+|                          | MASt3R    |     97.45 |      98.60 |          – |    97.45 |             3.04 px |
+|                          | VGGT      |     97.57 |      98.78 |      99.40 |    95.85 |             2.69 px |
+
+
+| **Aspect**          | **MASt3R**                                                                | **VGGT**                                                             |
+| ------------------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| **Model Type**      | Dual-view feature matching (asymmetric 3D regression)                     | Transformer-based multi-view geometric modeling                      |
+| **Input**           | Two images with known camera poses                                        | Two images with known camera poses (with adaptive resizing)          |
+| **Output**          | Per-pixel 3D coordinates projected to the other view                      | Dense per-pixel 3D point cloud                                       |
+| **Evaluation Core** | Cross-view reprojection error (geometric consistency)                     | End-to-end point cloud reprojection error (structural consistency)   |
+| **Main Metrics**    | AUC@5/10/20, Prec@3px, MeanErr                                            | Same metrics (+ enhanced visualization)                              |
+| **Strengths**       | Accurately reflects matching quality and geometric constraint reliability | Directly measures reconstruction capability and structural coherence |
+| **Limitations**     | Depends on pretrained feature matching; sensitive to image scale          | Requires fixed-resolution inputs; computationally expensive          |
