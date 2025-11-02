@@ -344,12 +344,20 @@ def main():
     print("Initializing and loading VGGT model...")
     # model = VGGT.from_pretrained("facebook/VGGT-1B")
 
-    model = VGGT()
-    _URL = "https://huggingface.co/facebook/VGGT-1B/resolve/main/model.pt"
-    model.load_state_dict(torch.hub.load_state_dict_from_url(_URL))
+    # model = VGGT()
+    # _URL = "https://huggingface.co/facebook/VGGT-1B/resolve/main/model.pt"
+    # # model.load_state_dict(torch.hub.load_state_dict_from_url(_URL))
+    # p = "/home/cxx/HWs/CS290U/project2/refs/vggt/model.pt"
+    # model.load_state_dict(torch.load(p))
 
-    model.eval()
-    model = model.to(device)
+    print("Initializing and loading VGGT model (pretrained from Hugging Face)...")
+    model = VGGT.from_pretrained("facebook/VGGT-1B")
+    model = model.to(device).eval()
+    print("✅ Loaded pretrained VGGT-1B successfully.")
+
+
+    # model.eval()
+    # model = model.to(device)
 
     # Use the provided image folder path
     print(f"Loading images from {args.image_folder}...")

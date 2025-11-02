@@ -1,0 +1,3 @@
+Evaluation Summary (20 pairs)
+AUC@5	AUC@10	AUC@20	Prec@3px	MeanErr(px)
+99.56	99.79	99.91	99.14	1.05

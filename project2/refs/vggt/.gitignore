@@ -4,12 +4,12 @@ ckpt/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 **/__pycache__/
-*.py[cod]
+*.py[code]
 *$py.class
 
 # C extensions
 *.so
-
+*.pt
 # Distribution / packaging
 .Python
 build/
