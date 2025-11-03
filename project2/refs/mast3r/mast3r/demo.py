@@ -139,6 +139,20 @@ def get_3D_model_from_scene(silent, scene_state, min_conf_thr=2, as_pointcloud=F
     else:
         pts3d, _, confs = to_numpy(scene.get_dense_pts3d(clean_depth=clean_depth))
     msk = to_numpy([c > min_conf_thr for c in confs])
+    # addition
+    import os, json
+    poses_out = []
+    for idx, pose_c2w in enumerate(cams2world):
+        poses_out.append({
+            "image_id": str(idx),
+            "cam2world": pose_c2w.numpy().tolist()
+        })
+    poses_json_path = os.path.splitext(outfile)[0] + "_poses.json"
+    with open(poses_json_path, "w") as f:
+        json.dump(poses_out, f, indent=2)
+    if not silent:
+        print(f"[✓] Exported {len(poses_out)} camera poses → {poses_json_path}")
+    
     return _convert_scene_output_to_glb(outfile, rgbimg, pts3d, msk, focals, cams2world, as_pointcloud=as_pointcloud,
                                         transparent_cams=transparent_cams, cam_size=cam_size, silent=silent)
 

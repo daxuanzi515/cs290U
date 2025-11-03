@@ -1,0 +1,6 @@
+
+Evaluation Results (mean over 307 pairs, original pixel scale):
+AUC@1	AUC@2	AUC@5	AUC@10	Prec(=AUC@5)	MScore(=MeanConf)
+  0.59	  4.54	 98.37	 99.59	 98.37	 88.94
+
+Mean Reprojection Error: 3.1433 px

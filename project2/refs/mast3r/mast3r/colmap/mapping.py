@@ -104,6 +104,53 @@ def run_mast3r_matching(model: AsymmetricMASt3R, maxdim: int, patch_size: int, d
                                          pixel_tol=pixel_tol)
         im_matches.update(im_images_chunk.items())
 
+        # === 导出匹配坐标（新增部分） ===
+        import csv, numpy as np, torch, os
+        dump_csv = os.path.join("/home/cxx/HWs/CS290U/project2/datasets/exps/matches/mast3r", 
+                                "mast3r_match_pairs.csv")
+        if not os.path.exists(dump_csv):
+            with open(dump_csv, "w", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow(["img0","img1","x0","y0","x1","y1","conf"])
+
+        def to_original_pts(img_dict, xy_np):
+            pts = torch.from_numpy(xy_np).float()
+            pts_yx = pts[:, [1, 0]][None, ...]
+            pts_yx_orig = img_dict["to_orig"](pts_yx)
+            return pts_yx_orig[0][:, [1, 0]].cpu().numpy()
+
+        for (img_i, img_j) in pairs_chunk:
+            i, j = img_i['idx'], img_j['idx']
+            pair_key = (i, j)
+            if pair_key not in im_matches:
+                continue
+
+            kpts_i = im_keypoints[i].get('keypoints') or im_keypoints[i].get('kpts')
+            kpts_j = im_keypoints[j].get('keypoints') or im_keypoints[j].get('kpts')
+            if kpts_i is None or kpts_j is None:
+                continue
+
+            pair_data = im_matches[pair_key]
+            if 'matches' in pair_data:
+                idx_ij = pair_data['matches']
+                conf   = pair_data.get('conf', np.ones(len(idx_ij)))
+                xy0 = kpts_i[idx_ij[:,0]]
+                xy1 = kpts_j[idx_ij[:,1]]
+            else:
+                xy0 = pair_data['xy0']
+                xy1 = pair_data['xy1']
+                conf = pair_data.get('conf', np.ones(len(xy0)))
+
+            xy0_orig = to_original_pts(img_i, xy0)
+            xy1_orig = to_original_pts(img_j, xy1)
+
+            with open(dump_csv, "a", newline="") as f:
+                writer = csv.writer(f)
+                img0_rel = img_i['instance']
+                img1_rel = img_j['instance']
+                for (x0,y0),(x1,y1),c in zip(xy0_orig, xy1_orig, conf):
+                    writer.writerow([img0_rel, img1_rel, float(x0), float(y0), float(x1), float(y1), float(c)])
+
     # filter matches, convert them and export keypoints and matches to colmap db
     colmap_image_pairs = export_matches(
         colmap_db, images, image_to_colmap, im_keypoints, im_matches, min_len_track, skip_geometric_verification)

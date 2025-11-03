@@ -1,6 +1,6 @@
 import viser
 
-glb_path = "/home/cxx/HWs/CS290U/project2/refs/vggt/outs/aerial_h_1.glb"
+glb_path = "/home/cxx/HWs/CS290U/project2/refs/vggt/outs/vggt_data1.glb"
 server = viser.ViserServer(host="0.0.0.0", port=8081)
 
 # 1️⃣ 以二进制方式读取 .glb 文件

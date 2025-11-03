@@ -69,7 +69,74 @@ def get_args_parser():
     return parser
 
 
-@torch.no_grad()
+# @torch.no_grad()
+# def coarse_matching(query_view, map_view, model, device, pixel_tol, fast_nn_params):
+#     imgs = []
+#     for idx, img in enumerate([query_view['rgb_rescaled'], map_view['rgb_rescaled']]):
+#         imgs.append(dict(img=img.unsqueeze(0), true_shape=np.int32([img.shape[1:]]),
+#                          idx=idx, instance=str(idx)))
+#     output = inference([tuple(imgs)], model, device, batch_size=1, verbose=False)
+#     pred1, pred2 = output['pred1'], output['pred2']
+#     conf_list = [pred1['desc_conf'].squeeze(0).cpu().numpy(),
+#                  pred2['desc_conf'].squeeze(0).cpu().numpy()]
+#     desc_list = [pred1['desc'].squeeze(0).detach(),
+#                  pred2['desc'].squeeze(0).detach()]
+
+#     PQ, PM = desc_list[0], desc_list[1]
+#     if len(PQ) == 0 or len(PM) == 0:
+#         return [], [], [], []
+
+#     if pixel_tol == 0:
+#         matches_im_map, matches_im_query = fast_reciprocal_NNs(PM, PQ, subsample_or_initxy1=8, **fast_nn_params)
+#         HM, WM = map_view['rgb_rescaled'].shape[1:]
+#         HQ, WQ = query_view['rgb_rescaled'].shape[1:]
+#         valid_matches_map = (matches_im_map[:, 0] >= 3) & (matches_im_map[:, 0] < WM - 3) & \
+#                             (matches_im_map[:, 1] >= 3) & (matches_im_map[:, 1] < HM - 3)
+#         valid_matches_query = (matches_im_query[:, 0] >= 3) & (matches_im_query[:, 0] < WQ - 3) & \
+#                               (matches_im_query[:, 1] >= 3) & (matches_im_query[:, 1] < HQ - 3)
+#         valid_matches = valid_matches_map & valid_matches_query
+#         matches_im_map = matches_im_map[valid_matches]
+#         matches_im_query = matches_im_query[valid_matches]
+#         valid_pts3d = []
+#         matches_confs = []
+#     else:
+#         yM, xM = torch.where(map_view['valid_rescaled'])
+#         yM, xM = [t.cpu().numpy().astype(np.float64) for t in (yM, xM)]
+
+#         matches_im_map, matches_im_query = fast_reciprocal_NNs(
+#             PM, PQ, (xM, yM), pixel_tol=pixel_tol, **fast_nn_params
+#         )
+
+#         # ✅ ensure all are float before geometric operations
+#         matches_im_map = np.asarray(matches_im_map, dtype=np.float64)
+#         matches_im_query = np.asarray(matches_im_query, dtype=np.float64)
+
+#         valid_pts3d = map_view['pts3d_rescaled'].cpu().numpy()[
+#             matches_im_map[:, 1].astype(int), matches_im_map[:, 0].astype(int)
+#         ]
+#         matches_confs = np.minimum(
+#             conf_list[1][matches_im_map[:, 1].astype(int), matches_im_map[:, 0].astype(int)],
+#             conf_list[0][matches_im_query[:, 1].astype(int), matches_im_query[:, 0].astype(int)]
+#         )
+
+#     # ✅ safe float64
+#     matches_im_query = np.asarray(matches_im_query, dtype=np.float64)
+#     matches_im_map = np.asarray(matches_im_map, dtype=np.float64)
+
+#     matches_im_query[:, 0] += 0.5
+#     matches_im_query[:, 1] += 0.5
+#     matches_im_map[:, 0] += 0.5
+#     matches_im_map[:, 1] += 0.5
+
+#     matches_im_query = geotrf(query_view['to_orig'], matches_im_query, norm=True)
+#     matches_im_map = geotrf(map_view['to_orig'], matches_im_map, norm=True)
+#     matches_im_query[:, 0] -= 0.5
+#     matches_im_query[:, 1] -= 0.5
+#     matches_im_map[:, 0] -= 0.5
+#     matches_im_map[:, 1] -= 0.5
+#     return valid_pts3d, matches_im_query, matches_im_map, matches_confs
+
+
 def coarse_matching(query_view, map_view, model, device, pixel_tol, fast_nn_params):
     # prepare batch
     imgs = []
@@ -102,6 +169,9 @@ def coarse_matching(query_view, map_view, model, device, pixel_tol, fast_nn_para
         matches_confs = []
     else:
         yM, xM = torch.where(map_view['valid_rescaled'])
+        # # fix
+        # yM, xM = [t.cpu().numpy().astype(np.float64) for t in (yM, xM)]
+
         matches_im_map, matches_im_query = fast_reciprocal_NNs(PM, PQ, (xM, yM), pixel_tol=pixel_tol, **fast_nn_params)
         valid_pts3d = map_view['pts3d_rescaled'].cpu().numpy()[matches_im_map[:, 1], matches_im_map[:, 0]]
         matches_confs = np.minimum(
@@ -292,6 +362,9 @@ if __name__ == '__main__':
     device = args.device
     pnp_mode = args.pnp_mode
     assert args.pixel_tol > 0
+    # if args.pixel_tol < 0:
+    #     raise ValueError("pixel_tol must be >= 0")
+
     reprojection_error = args.reprojection_error
     reprojection_error_diag_ratio = args.reprojection_error_diag_ratio
     pnp_max_points = args.pnp_max_points
@@ -512,9 +585,16 @@ if __name__ == '__main__':
                 reprojection_error_img = reprojection_error_diag_ratio * math.sqrt(W**2 + H**2)
             else:
                 reprojection_error_img = reprojection_error
+
+            ## issue image to pnp
+            # TODO
+            query_pts3d = np.ascontiguousarray(query_pts3d, dtype=np.float64)
+            K = np.ascontiguousarray(query_view['intrinsics'], dtype=np.float64)
+            dist = np.ascontiguousarray(query_view['distortion'], dtype=np.float64)
+
             success, pr_querycam_to_world = run_pnp(query_pts2d, query_pts3d,
                                                     query_view['intrinsics'], query_view['distortion'],
-                                                    pnp_mode, reprojection_error_img, img_size=[W, H])
+                                                    pnp_mode, reprojectionError=5.0, img_size=[W, H])
 
         if not success:
             abs_transl_error = float('inf')
