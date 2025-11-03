@@ -1,8 +1,11 @@
 # 🧠 CS290U Project 3：探索扩散模型的生成能力 — 从潜空间到多模态合成
 
 **指导教师：** Prof. Yuijao Shi
+
 **截止时间：** 2025 年 11 月 16 日 23:59
+
 **提交格式：** PDF 报告 + 代码打包为 `学号-姓名-project3.zip` 上传至
+
 [https://epan.shanghaitech.edu.cn/l/W11wly](https://epan.shanghaitech.edu.cn/l/W11wly)
 
 ---
@@ -29,7 +32,7 @@
 
 ---
 
-## 二、基础探索：生成的基本原理
+## 2 Basic Task (基础任务)
 
 ### 2.1 🧩 VAE：图像重建与潜空间编码
 
@@ -112,7 +115,7 @@ DDPM 是扩散模型的基础实现，但采样速度慢。
 
 ---
 
-## 三、进阶应用：可控生成
+## 3 Advanced Task (进阶任务)
 
 ### 3.1 🧠 条件生成：训练 Tiny Multimodal SD
 
@@ -143,10 +146,10 @@ DDPM 是扩散模型的基础实现，但采样速度慢。
 
 ---
 
-### 3.2 🧰 ComfyUI：了解扩散工作流
+### 3.2 🧰 ComfyUI：了解扩散工作流 （拓展，不用太多）
 
 **ComfyUI** 是一个图形化的 Stable Diffusion 推理框架，
-用户可通过拖拽节点构建复杂生成流程（如 CLIP 编码 → UNet 推理 → VAE 解码）。
+用户可通过拖拽节点构建复杂生成流程（如 CLIP 编码 → UNet 推理 → VAE 解码），多模块串工作流。
 
 #### 🧪 实践任务
 

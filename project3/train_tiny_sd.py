@@ -60,9 +60,12 @@ class EpsMLPCond(nn.Module):
         if cond.dim() != 2:
             cond = cond.view(cond.size(0), -1)
 
-        t_emb = self.sinusoidal_time_embedding(t, self.time_dim)
-        t_emb = self.time_mlp(t_emb)
-        h = torch.cat([x, t_emb, cond], dim=1)
+
+        ###################################### Advanced Task ######################################
+
+        # Finish conditioning pathway here!
+  
+        ###################################### Advanced Task ######################################
         out = self.net(h)
         return out.view(out.size(0), self.latent_dim, 1, 1)
 

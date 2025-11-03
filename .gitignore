@@ -1,3 +1,5 @@
 *.zip
 *.tar
 .vscode/
+*.pkl
+*.pt

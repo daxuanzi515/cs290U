@@ -186,10 +186,10 @@ Outputs (under `result/clip/`)
 
 ## Tiny MNIST Stable Diffusion (text-conditioned)
 
-<span style="color:#d32f2f"><strong>To do: complete the code in `HW3/Unet.py:155`.</strong></span>
+<span style="color:#d32f2f"><strong>To do: complete the code in `train_tiny_sd.py:64`.</strong></span>
 
-- Files: `train_tiny_sd.py`, `HW3/Unet.py`, `HW3/diffusion.py`, `HW3/clip.py`
-- Conditioning: CLIP text encoder provides class embeddings for labels 0–9; UNet receives `cond_dim=embed_dim`.
+- Files: `train_tiny_sd.py`, `HW3/diffusion.py`, `HW3/clip.py`
+- Conditioning: CLIP text encoder provides class embeddings for labels 0–9.
 
 Run
 ```bash

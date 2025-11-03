@@ -152,11 +152,9 @@ class UNet(nn.Module):
         t_emb = sinusoidal_time_embedding(t, dim=self.time_mlp.net[0].in_features)
         t_emb = self.time_mlp(t_emb)
 
-        ###################################### Advanced Task ######################################
-
-        # Finish conditioning pathway here!
-
-        ###################################### Advanced Task ######################################
+        if cond is not None and self.cond_proj is not None:
+            c_emb = self.cond_proj(cond)
+            t_emb = t_emb + c_emb
 
         skips: List[torch.Tensor] = []
         h = x
