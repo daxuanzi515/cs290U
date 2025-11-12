@@ -60,16 +60,10 @@ class EpsMLPCond(nn.Module):
         if cond.dim() != 2:
             cond = cond.view(cond.size(0), -1)
 
-
-        ###################################### Advanced Task ######################################
-
-        # Finish conditioning pathway here!
-
         time_emb = self.sinusoidal_time_embedding(t, self.time_dim)
         # 将时间嵌入和条件嵌入与潜在向量 x 进行拼接
         h = torch.cat([x, time_emb, cond], dim=1)  # (B, D + time_dim + cond_dim)
-  
-        ###################################### Advanced Task ######################################
+
         out = self.net(h)
         return out.view(out.size(0), self.latent_dim, 1, 1)
 
@@ -130,8 +124,8 @@ def save_grid_by_class(
     labels = torch.tensor(list(range(10)) * 8, device=device, dtype=torch.long)
     cond = clip.text_encoder(labels)  # (80, D)
 
-    # Sample latent z with DDIM, then decode via VAE
-    z = diffusion.sample_ddim(batch_size=labels.size(0), device=device, steps=steps, eta=eta, cond=cond)
+    # Sample latent z with DDPM, then decode via VAE
+    z = diffusion.sample_ddpm(batch_size=labels.size(0), device=device, steps=steps, eta=eta, cond=cond)
     z = z.view(z.size(0), latent_dim)
     if canonicalize:
         z = vae.canonicalize_latent(z)
@@ -241,3 +235,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

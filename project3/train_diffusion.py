@@ -117,6 +117,6 @@ def main():
     # final sample
     save_samples(diffusion, out_dir, args.epochs, device, args.ddim_steps, args.ddim_eta)
 
-
+    
 if __name__ == "__main__":
     main()

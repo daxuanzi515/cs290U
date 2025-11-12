@@ -40,7 +40,7 @@ def save_recon_only(
 def main():
     parser = argparse.ArgumentParser(description="Train ConvVAE on MNIST and save per-epoch samples")
     parser.add_argument("--data-dir", type=str, default="data/MNIST", help="MNIST data directory (root for torchvision MNIST)")
-    parser.add_argument("--output-dir", type=str, default="result/vae", help="Directory to save checkpoints and images")
+    parser.add_argument("--output-dir", type=str, default="results/vae", help="Directory to save checkpoints and images")
     parser.add_argument("--epochs", type=int, default=40)
     parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--lr", type=float, default=2e-4)

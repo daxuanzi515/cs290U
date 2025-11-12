@@ -76,7 +76,7 @@ def parse_args():
     p.add_argument("--num_workers", type=int, default=4)
     p.add_argument("--val_split", type=float, default=0.0)
     # VAE
-    p.add_argument("--vae_ckpt", type=str, default="./result/vae/convae_latest.pt", help="Path to ConvVAE checkpoint")
+    p.add_argument("--vae_ckpt", type=str, default="./results/vae_beta_0.5/convae_latest.pt", help="Path to ConvVAE checkpoint")
     p.add_argument("--latent_dim", type=int, default=-1, help="Latent dim; if <1, inferred from VAE checkpoint args")
     p.add_argument("--canonicalize", action="store_true", help="Canonicalize latent sign per-sample during training & sampling")
     # Diffusion
@@ -92,7 +92,7 @@ def parse_args():
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
     # Logging / Checkpoints
-    p.add_argument("--out_dir", type=str, default="./result/latent_diffusion", help="Directory to save checkpoints & samples")
+    p.add_argument("--out_dir", type=str, default="./results/latent_diffusion", help="Directory to save checkpoints & samples")
     # Sampling settings
     p.add_argument("--ddim_steps", type=int, default=200)
     p.add_argument("--ddim_eta", type=float, default=0.0)
