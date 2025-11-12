@@ -345,3 +345,39 @@ python eval_clip.py \
 Validation accuracy: 0.9840
 Zero-shot accuracy: 0.1562
 ```
+但是发现准确率很低，模型没有学到语义对齐的特征，只是学到像素映射关系；
+因此在采样的图里做不到竖列都是一样的数字的图的效果，只能做到乱七八糟数字的图：
+![](results/tiny_sd/samples_epoch_040.png)
+
+我怀疑我代码写错了，然后修改了一下：
+
+```python
+# train_tiny_sd.py:
+time_emb = self.sinusoidal_time_embedding(t, self.time_dim)
+# 将时间嵌入和条件嵌入与潜在向量 x 进行拼接
+h = torch.cat([x, time_emb, cond], dim=1)  # (B, D + time_dim + cond_dim)
+
+
+# diffision.py:
+            eps_pred = self.model(img, t, cond) if cond is not None else self.model(img, t)
+            x0_pred = (img - torch.sqrt(1.0 - a_bar_t) * eps_pred) / torch.sqrt(a_bar_t)
+
+            if i == 0:
+                # 最后一步直接到 x0
+                img = x0_pred
+                break
+
+            # 上一个子时间步（而非 t-1）
+            t_prev = ts[i - 1].expand(batch_size)
+            a_bar_prev = self.alpha_bars[t_prev].view(-1, 1, 1, 1).clamp(1e-12, 1.0)
+
+            # DDIM sigma：eta * sqrt((1-ā_prev)/(1-ā_t) * (1 - ā_t/ā_prev))
+            sigma_t = eta * torch.sqrt(
+                (1.0 - a_bar_prev) / (1.0 - a_bar_t) * (1.0 - a_bar_t / a_bar_prev)
+            ).clamp_min(0.0)
+
+            # 均值项：确定性部分 + 残差项（与 eps_pred 同向）
+            # 注意：当 eta=0 时，第二项与第三项（噪声）都应消失
+            c = torch.sqrt(1.0 - a_bar_prev - sigma_t ** 2).clamp_min(0.0)
+            mean = torch.sqrt(a_bar_prev) * x0_pred + c * eps_pred  
+```

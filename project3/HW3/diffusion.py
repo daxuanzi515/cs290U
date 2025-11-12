@@ -115,32 +115,31 @@ class GaussianDiffusion(nn.Module):
         for i in reversed(range(steps)):
             t = ts[i].expand(batch_size)
             a_bar_t = self.alpha_bars[t].view(-1, 1, 1, 1)
-
             ###################################### DDIM Task ######################################
-            eps_pred = self.model(img, t, cond) if cond is not None else self.model(img, t)
-            x0_pred = (img - torch.sqrt(1.0 - a_bar_t) * eps_pred) / torch.sqrt(a_bar_t)
+            # 1. 预测噪声
+            eps = self.model(img, t, cond) if cond is not None else self.model(img, t)
 
+            # 2. 根据 eps 预测出 x0
+            x0_pred = (img - torch.sqrt(1 - a_bar_t) * eps) / torch.sqrt(a_bar_t)
+
+            # 3. 计算下一个时间步 (t_prev)
             if i == 0:
-                # 最后一步直接到 x0
-                img = x0_pred
-                break
-
-            # 上一个子时间步（而非 t-1）
+                return x0_pred  # 最后一步直接返回重建结果
             t_prev = ts[i - 1].expand(batch_size)
-            a_bar_prev = self.alpha_bars[t_prev].view(-1, 1, 1, 1).clamp(1e-12, 1.0)
+            a_bar_prev = self.alpha_bars[t_prev].view(-1, 1, 1, 1)
 
-            # DDIM sigma：eta * sqrt((1-ā_prev)/(1-ā_t) * (1 - ā_t/ā_prev))
+            # 4. DDIM 方程（deterministic when eta=0）
             sigma_t = eta * torch.sqrt(
-                (1.0 - a_bar_prev) / (1.0 - a_bar_t) * (1.0 - a_bar_t / a_bar_prev)
-            ).clamp_min(0.0)
+                (1 - a_bar_prev) / (1 - a_bar_t) * (1 - a_bar_t / a_bar_prev)
+            )
+            dir_xt = torch.sqrt(1.0 - a_bar_prev - sigma_t**2) * eps
+            noise = torch.randn_like(img) if eta > 0 else 0.0
 
-            # 均值项：确定性部分 + 残差项（与 eps_pred 同向）
-            # 注意：当 eta=0 时，第二项与第三项（噪声）都应消失
-            c = torch.sqrt(1.0 - a_bar_prev - sigma_t ** 2).clamp_min(0.0)
-            mean = torch.sqrt(a_bar_prev) * x0_pred + c * eps_pred            
+            # 5. 生成下一步样本
+            img = torch.sqrt(a_bar_prev) * x0_pred + dir_xt + sigma_t * noise
             ###################################### DDIM Task ######################################
         return img
-
+    
     def training_loss(self, x0: torch.Tensor, noise: Optional[torch.Tensor] = None, cond: Optional[torch.Tensor] = None) -> torch.Tensor:
         B = x0.size(0)
         if noise is None:
