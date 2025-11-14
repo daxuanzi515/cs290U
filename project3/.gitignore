@@ -1,6 +1,7 @@
 *.zip
 *.pt
 *.pth
+*.safetensors
 *.tar
 *.tar.gz
 __pycache__/
@@ -10,4 +11,6 @@ __pycache__/
 
 # files
 results/
+result/
 data/
+comfy_weights/

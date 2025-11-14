@@ -221,7 +221,7 @@ Epoch 040 | latent train_loss: 0.2799
 ```
 VAE-beta=0.5 is better.
 # Advanced Task
-## Tiny MNIST Stable Diffusion (tiny_minist_sd)
+## 3.1 Tiny MNIST Stable Diffusion (tiny_minist_sd)
 先训练clip之后再训练tiny_sd.
 
 Clip: 
@@ -381,3 +381,89 @@ h = torch.cat([x, time_emb, cond], dim=1)  # (B, D + time_dim + cond_dim)
             c = torch.sqrt(1.0 - a_bar_prev - sigma_t ** 2).clamp_min(0.0)
             mean = torch.sqrt(a_bar_prev) * x0_pred + c * eps_pred  
 ```
+
+40轮里选出2张比较满意的图：
+
+![](candidates/40epch/samples_epoch_023.png)
+
+![](candidates/40epch/samples_epoch_024.png)
+
+200轮里选出其中三张比较满意的图：
+
+![](candidates/samples_epoch_186.png)
+
+![](candidates/samples_epoch_194.png)
+
+![](candidates/samples_epoch_195.png)
+
+## 3.2 ComfyUI (exploration)
+
+1. 安装 [ComfyUI](https://github.com/comfyanonymous/ComfyUI)。
+2. 构建至少两种 text-to-image 流程并生成图像。
+3. 可尝试不同的 LoRA 或采样器并分析失败原因。
+
+### ENV
+```shell
+cd ComfyUI
+conda activate cs290u_hw3
+pip install -r requirements.txt
+python main.py --listen 0.0.0.0 --port 8188
+```
+访问：http://127.0.0.1:8188
+
+权重放哪里？这个是结构：
+```
+ComfyUI/
+├── models/
+│   ├── checkpoints/        ← 主扩散模型（Stable Diffusion / SDXL）
+│   ├── vae/                ← VAE 解码模型
+│   ├── clip/               ← CLIP 文本编码器
+│   ├── loras/              ← LoRA 权重
+│   ├── embeddings/         ← Textual Inversion 嵌入（.pt / .bin）
+│   ├── controlnet/         ← ControlNet 模型
+│   ├── upscalers/          ← 放超分模型（如 ESRGAN）
+│   └── style_models/       ← 风格模型（部分节点使用）
+```
+
+这里的位置映射，假设你当前路径为 project3/：
+```shell
+cp -r results/clip* ComfyUI/models/clip/
+cp -r results/vae_beta_* ComfyUI/models/vae/
+cp -r results/diffusion ComfyUI/models/checkpoints/
+cp -r results/latent_diffusion_* ComfyUI/models/checkpoints/
+cp -r results/tiny_sd* ComfyUI/models/checkpoints/
+```
+
+### Customized Nodes Manager for ComfyUI
+直接用官方的VAE节点导入权重，发现我们的vae的权重不被接受，尝试安装`nodes_manager`来自定义节点，否则按照官方定义的VAE我们是无法自适应的。
+
+![](imgs/2025-11-14%2017-52-29屏幕截图.png)
+
+
+参考链接：https://www.uisdc.com/comfyui-3
+
+下载Linux版：https://github.com/Comfy-Org/ComfyUI-Manager
+
+手动按脚本操作：
+```shell
+cd ComfyUI/custom_nodes
+git clone https://github.com/ltdrdata/ComfyUI-Manager comfyui-manager
+pip install -r custom_nodes/comfyui-manager/requirements.txt
+cd ..
+python main.py --listen 0.0.0.0 --port 8188 
+```
+成功的看到如图1变为图2：
+![图1](imgs/2025-11-13%2019-56-18屏幕截图.png)
+![图2](imgs/2025-11-14%2017-48-09屏幕截图.png)
+
+根据指南安装汉化节点。
+
+### 自定义插件
+
+**之后是自定义节点的部分，可以在`custom_nodes`里找到一个示例`example_node.py.example`, 我们根据自己的VAE需要编写一个新的节点插件来用于专门导入特殊权重。**
+
+参考资料: 
+- https://zhuanlan.zhihu.com/p/7033713672
+- https://github.com/liubai-liubai/ComfyUI-ImgSeg-LB
+- https://github.com/Pal-dont-want-to-work/comfyui-custom_nodes-tutorial
+- https://h0zkh0f8v2a.feishu.cn/wiki/KUnlwgJxSidQi7k0Iq3cUvGpnLS
