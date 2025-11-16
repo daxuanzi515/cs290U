@@ -84,24 +84,24 @@ python train_diffusion.py \
 Loss:
 ```shell
 Epoch 001 | train_loss: 0.0768
-Epoch 002 | train_loss: 0.0289
+Epoch 002 | train_loss: 0.0286
 Epoch 003 | train_loss: 0.0248
-Epoch 004 | train_loss: 0.0227
-Epoch 005 | train_loss: 0.0214
-Epoch 006 | train_loss: 0.0205
-Epoch 007 | train_loss: 0.0201
+Epoch 004 | train_loss: 0.0228
+Epoch 005 | train_loss: 0.0217
+Epoch 006 | train_loss: 0.0208
+Epoch 007 | train_loss: 0.0197
 Epoch 008 | train_loss: 0.0193
-Epoch 009 | train_loss: 0.0189
+Epoch 009 | train_loss: 0.0190
 Epoch 010 | train_loss: 0.0186
-Epoch 011 | train_loss: 0.0182
-Epoch 012 | train_loss: 0.0180
-Epoch 013 | train_loss: 0.0176
+Epoch 011 | train_loss: 0.0181
+Epoch 012 | train_loss: 0.0181
+Epoch 013 | train_loss: 0.0177
 Epoch 014 | train_loss: 0.0173
-Epoch 015 | train_loss: 0.0172
-Epoch 016 | train_loss: 0.0169
-Epoch 017 | train_loss: 0.0169
+Epoch 015 | train_loss: 0.0171
+Epoch 016 | train_loss: 0.0171
+Epoch 017 | train_loss: 0.0170
 Epoch 018 | train_loss: 0.0168
-Epoch 019 | train_loss: 0.0168
+Epoch 019 | train_loss: 0.0165
 Epoch 020 | train_loss: 0.0167
 ```
 
@@ -467,3 +467,52 @@ python main.py --listen 0.0.0.0 --port 8188
 - https://github.com/liubai-liubai/ComfyUI-ImgSeg-LB
 - https://github.com/Pal-dont-want-to-work/comfyui-custom_nodes-tutorial
 - https://h0zkh0f8v2a.feishu.cn/wiki/KUnlwgJxSidQi7k0Iq3cUvGpnLS
+
+### 使用默认模版构建工作流
+v1-5-pruned-emaonly-fp16.safetensors: 
+https://cas-bridge.xethub.hf.co/xet-bridge-us/66d0dccb3866d4d3087d3a9f/908c39bfdfec888e295ba04e974b6342f3c15776760edd46838240a8d455525d?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=cas%2F20251116%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20251116T101354Z&X-Amz-Expires=3600&X-Amz-Signature=aa1135302f3f18f3314fa40099f8787613a3b89ee19e1f8a4ed157153b44546d&X-Amz-SignedHeaders=host&X-Xet-Cas-Uid=684fe4ca662a7bb7a96e6b80&response-content-disposition=attachment%3B+filename*%3DUTF-8%27%27v1-5-pruned-emaonly-fp16.safetensors%3B+filename%3D%22v1-5-pruned-emaonly-fp16.safetensors%22%3B&x-id=GetObject&Expires=1763291634&Policy=eyJTdGF0ZW1lbnQiOlt7IkNvbmRpdGlvbiI6eyJEYXRlTGVzc1RoYW4iOnsiQVdTOkVwb2NoVGltZSI6MTc2MzI5MTYzNH19LCJSZXNvdXJjZSI6Imh0dHBzOi8vY2FzLWJyaWRnZS54ZXRodWIuaGYuY28veGV0LWJyaWRnZS11cy82NmQwZGNjYjM4NjZkNGQzMDg3ZDNhOWYvOTA4YzM5YmZkZmVjODg4ZTI5NWJhMDRlOTc0YjYzNDJmM2MxNTc3Njc2MGVkZDQ2ODM4MjQwYThkNDU1NTI1ZCoifV19&Signature=AvFib5-D1NPg0GyJxPt7MyjQuVGZQ9I9P7C7z-2AeqEdVzpCrIvrpSsoFjoorSkx3M9UgmMwVovLHaOVNi7NNphnsMzExcfxTyN7ZaT1W5zvFquukSsjQhJb5q-4bBFhSzspvvts-JLYvlv9exHH86KBmMVm0blzKH3CbnXEtJc2ZHQDYC7darsUUKLmJzkjhMEUHPfVqOHwQW5ENh5b8IhAoCc36d0wUHH0UpbE1Ab%7EyFFbv4qE7yW0%7EcPz0h0B7yV78xkhdLthJ2Afh6ZLG9FMpnq6z5AbabS%7EaF6BjjTgxVrjBJpd4erbrrSIkqnzHlxzPusgzOkGcm-Rw5r56g__&Key-Pair-Id=K2L8F4GPSG1IFC
+
+
+dreamshaper_8.safetensors: 
+https://civitai-delivery-worker-prod.5ac0637cfd0766c97916cefa3764fbdf.r2.cloudflarestorage.com/53515/model/dreamshaper8Pruned.hz5Q.safetensors?X-Amz-Expires=86400&response-content-disposition=attachment%3B%20filename%3D%22dreamshaper_8.safetensors%22&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=e01358d793ad6966166af8b3064953ad/20251116/us-east-1/s3/aws4_request&X-Amz-Date=20251116T101151Z&X-Amz-SignedHeaders=host&X-Amz-Signature=c1135793233f651111e90e2facbfc69b79fdb14617997a7c5ad22e7b120904f9
+
+Mix_V1:
+https://civitai.com/api/download/models/14856?type=Model&format=SafeTensor&size=full&fp=fp16
+
+**Default**
+
+成功导入模型之后运行第一个工作流default:
+
+使用初始例子：![](./imgs/default_test_0.png)
+
+positive prompt:
+`generate 8*10 matrix, from zero to nine numbers, a black and white image.`
+negative prompt:
+`people and object, blur`
+
+跑结果：![](./imgs/default_test_02_SD1.5_00003_.png)
+
+提示词不够强，更换提示词：
+
+`Black-and-white bitmap, 8×10 matrix of Arabic numerals 0-9, each column contains 8 different digits without repetition, all cells clearly legible, high-contrast white background black digits, no shading no color no grid lines, crisp sans-serif font, 300 dpi, pure monochrome, 1-bit depth`
+
+`No color, no grayscale, no grid, no frame, no shadow, no anti-aliasing, no blur, no distortion, no repetition within any column, no decorative elements`
+
+跑结果：
+- ![](./imgs/default_test_03_SD1.5_00031_.png)
+- ![](./imgs/default_test_04_SD1.5_00035_.png)
+
+虽然生成了数字但是没有完全按照要求生成，原因是采用的Comfy的Default使用的是v1-5-pruned-emaonly-fp16.safetensors，专注于文生图，但是生成的图像集中于彩色和多样性，并不擅长生成准确的像素数字的黑白图像。
+
+
+**Lora Multiple**:
+
+![](imgs/lora_multi_test_0.png)
+
+发现lora强引导生成人，以下几张勉强可用：
+- ![](./imgs/2loras_test__00014_.png)
+- ![](./imgs/2loras_test__00111_.png)
+- ![](./imgs/2loras_test__00140_.png)
+- ![](./imgs/2loras_test__00148_.png)
+
+loras允许使用多个不一样风格的loras模型，但是这些loras模型大部分专注生成动漫人物的各种风格，比如古风、宫崎骏、东京塔、星空、日系、日系人物等等，并不擅长生成像素数字的黑白图像。而且无论你如何调整提示词，它其实都默认你生成的对象包含人物在内的元素，这样就算在negative提示词编写了不允许人的元素，基本还是会生成人物相关的图像。
