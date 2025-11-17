@@ -1,0 +1,12 @@
+*.zip
+*.pt
+*.pth
+*.safetensors
+*.tar
+*.tar.gz
+__pycache__/
+*.pyc
+.DS_Store
+.vscode/
+
+# files
