@@ -1,0 +1,6 @@
+clip==1.0
+diffusers==0.35.2
+lpips==0.1.4
+Pillow==12.0.0
+torch==2.9.0
+torchvision==0.24.0

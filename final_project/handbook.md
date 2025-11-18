@@ -178,3 +178,329 @@
 
 省流:
 ComfyUI已经做过，可以作为一个小的拓展方向。其他方面可以作为辅助，主要聚焦在图生图/文生图升级版。
+这里可以把之前没有做完的custom_nodes补充完整！
+
+-----
+
+## GPT 5.1 的创新型研究
+
+好，这个选项我也觉得最带感 😈
+你想做 **2（一致性保证）+3（反事实生成）** 的组合，其实可以自然融合成一个方向：
+
+> **“一致性约束下的反事实视觉生成系统”**
+> （Consistency-Aware Counterfactual Diffusion, 简称 C²D）
+
+下面我帮你把这个课题细化成：**问题定义 → 系统架构 → 和 Project3 的对齐 → 训练/推理流程 → 可做的扩展层级**。你直接可以拿去写 proposal / 大作业设计。
+
+---
+
+## 1. 先把“反事实生成”在你这边说清楚
+
+在你的语境里，反事实生成可以具体落在两个层级：
+
+### 1）图像级反事实（核心，强烈建议必做）
+
+输入：
+
+* 原始图像 (x)（比如一张存在某种属性/错误/行为的图）
+* 目标约束/修改指令 (c)（“没有暴力行为”，“把人物换成女性”，“车是红色的”）
+* 可选：failure explanation（“当前 agent 按错了按钮 X”）
+
+输出：
+
+* 新图像 (x')：
+
+  * **满足目标条件**：属性/错误被修正
+  * **与原图尽可能相似**：背景、主体、布局尽量不变
+  * **在多模态检验下保持一致**：文本描述、检测结果、不冲突
+
+也就是：
+
+> “保持世界大体不变，只改掉你指定的那一点。”
+
+非常适合你现在的视频暴力 QA、多视图错觉图、agent 失败场景。
+
+---
+
+### 2）轨迹/任务级反事实（可选扩展，不是必须）
+
+输入：
+
+* 一条任务轨迹：(\tau = {(o_t, a_t)}_{t=1}^T)
+  （o_t 是画面截图，a_t 是 agent 动作）
+* 一个 failure 描述：某步操作错了 / 没达成目标
+
+输出：
+
+* 一条新的“反事实轨迹” (\tau')：
+
+  * 相似的 UI/场景截图序列
+  * 在关键步骤处动作被替换为正确 action
+  * 可以配合少量新截图或反事实关键帧
+
+你其实可以先把问题简化成：
+
+> 仅对**关键帧**做反事实图像生成，顺带输出一个“正确动作序列”。
+
+——所以，**Minimal version**：先把图像级反事实做好，再把它包装成“某一步的 UI 反事实修复”。
+
+---
+
+## 2. 2+3 结合后的统一课题是什么？
+
+可以这样包装你的课题标题：
+
+> **Consistency-Aware Counterfactual Diffusion for Visual Tasks**
+> 一句话：
+> 使用扩散模型生成反事实图像，并通过一致性验证器约束“改动最小 + 目标满足”。
+
+其中：
+
+* “课题 3：反事实生成” → 负责 **“改一个世界版本”**
+* “课题 2：一致性保证” → 负责 **“你别改太过头、别改错、别胡来”**
+
+**系统逻辑：**
+
+1. Base Diffusion 先产一堆候选反事实 (x'_1, x'_2, ...)
+2. Consistency Validator 对每个候选计算：
+
+   * 目标是否达成（target validity）
+   * 与原图的一致性/相似度（minimal change）
+3. Rectifier / Reranker 选出或细化最优解
+
+> 你不是只生成，而是“**生成 + 检查 + 修正**”。
+
+---
+
+## 3. 和 Project3 的对齐方式（你能直接复用什么）
+
+### 你已有的 Project3 资产：
+
+* 自己实现的 **ConvVAE + UNet + DDPM/DDIM** → latent diffusion backbone
+* 已经有：
+
+  * image reconstruction
+  * conditional training（比如 label 条件 / CLIP 条件）
+  * 采样代码可改
+* 能跑在 3090 上，batch 小一点完全 OK
+
+我们做的事是：
+
+> 在现有 Project3 的 **latent diffusion** 外面，
+> 加一层 **“反事实条件 + 一致性验证器 + 迭代修正”**。
+
+不强行引入巨型预训练模型，只在必要的地方用，比如：
+
+* 轻量 CLIP（比如 open_clip / ViT-B/32）
+* 或一个你自己训的小分类器（比如暴力/非暴力）
+
+---
+
+## 4. 系统架构（C²D）：模块分解
+
+可以想象成 4 个模块：
+
+```mermaid
+flowchart LR
+    A[原始图像 x] --> B[条件编码器<br/>Condition Encoder]
+    C[目标条件 c<br/>(文字/标签/动作修正)] --> B
+    B --> D[反事实扩散生成器<br/>Counterfactual Diffusion (Project3 UNet)]
+    D --> E[候选反事实图 x']
+    E --> F[一致性验证器<br/>Consistency Validator]
+    F --> G[打分 & 选择/修正<br/>Rectifier / Reranker]
+    G --> H[最终反事实图 x*]
+```
+
+### 4.1 反事实扩散生成器（核心）
+
+* 基于你现有的 **VAE + UNet Diffusion**：
+
+  * 输入：原图 (x)，目标条件 (c)
+  * 输出：反事实图 (x')
+
+**实现方式：**
+
+* 把 (x) 编码到 latent：(z = \text{VAE.encode}(x))
+* 根据条件 (c) 设计一个 target embedding (e_c)
+* 训练一个 editing 方式：
+
+  * 给 latent 加噪声，然后在扩散过程中注入 (e_c)
+  * 对 loss 强调：
+
+    * 输出图满足条件（如分类为“无暴力”）
+    * 与原图的 VAE latent/像素保持接近（最小改动）
+
+### 4.2 一致性验证器（Consistency Validator）
+
+根据你的任务，可以选其中 2–3 个：
+
+* **CLIP相似度**：确保 x 与 x' “讲的是同一张图”，只是属性变了
+* **专门的属性分类器**：暴力/非暴力、有/无某个目标物体
+* **结构保留约束**：
+
+  * LPIPS / SSIM 限制“整体风格不变”
+  * 简单 edge detector 对比边缘保持
+
+验证器给出两个核心分数：
+
+1. (S_{target}(x'))：目标属性达成程度（越高越好）
+2. (S_{consistency}(x, x'))：对原图的保持程度（越高越好）
+
+你可以定义一个组合评分：
+
+[
+Score(x') = \alpha \cdot S_{target}(x') + \beta \cdot S_{consistency}(x, x')
+]
+
+### 4.3 Rectifier / Reranker（修正器）
+
+有两种玩法：
+
+1. **生成 N 个候选，然后选最好的 1 个**：
+
+   * 改变随机种子
+   * 或不同编辑 mask
+   * 用 Score 排序，选 top-1 / top-k
+
+2. **迭代修正**（更高级但可选）：
+
+   * 检查到目标没达成 → 再跑一遍编辑，强化 condition
+   * 检查到“改太多” → 适当放大 consistency_loss
+
+---
+
+## 5. 训练与推理：你具体可以怎么干
+
+### 5.1 数据与任务设定（建议从简单到复杂）
+
+**Level 1（通用图像属性）**：
+
+* 公开数据集：CelebA（有属性标签）、COCO（有 caption）、Violence/Non-violence 小数据集
+* 定义简单反事实任务：
+
+  * “smiling → not smiling”
+  * “with glasses → without glasses”
+  * “with weapon → without weapon”
+  * “two persons fighting → no fighting”
+
+**Level 2（你自己的视频 / 暴力行为 QA）**：
+
+* 从你的视频抽帧：
+
+  * 原始帧 = 暴力行为存在
+  * 目标反事实 = 不改变场景布局，只去掉武器/动作，或改成普通互动
+
+这两个 level 完全可以组合：
+
+* Level1 用来证明方法普适性
+* Level2 用来证明和你自己的研究闭环（暴力识别/QA）
+
+---
+
+### 5.2 训练流程（简化版）
+
+1. 预训练 / 复用你的 Project3 diffusion 在普通重建任务：
+
+   * VAE + UNet 学会“还原图像”
+
+2. 加入条件 c，做 editing 式训练：
+
+   * 输入：图像 (x)，目标条件 (c)（比如希望属性 flipped）
+   * 构造 supervision：
+
+     * 用已有标注构造“正例反事实图”（比如同一类中属性不同的图）
+     * 或用 CLIP/text loss 作为弱监督
+
+3. 加 consistency loss：
+
+   * (L_{consistency} = \lambda_1 \cdot |z'-z| + \lambda_2 \cdot LPIPS(x', x))
+
+4. 加 target loss：
+
+   * 如果有分类器：
+     (L_{target} = CE(f(x'), target_label))
+   * 如果用 CLIP：
+     (L_{target} = - \text{CLIP}(\text{encode}(x'), \text{encode}(c_text)))
+
+5. 总 loss：
+
+[
+L = L_{diffusion} + \gamma_1 L_{consistency} + \gamma_2 L_{target}
+]
+
+你可以直接用你 Project3 的 diffusion loss + 这两个新项。
+
+---
+
+### 5.3 推理过程（反事实生成）
+
+给定测试图 x 和目标描述 c：
+
+1. 编码：(z = \text{VAE.encode}(x))
+2. 加噪声：(z_T = add_noise(z))
+3. 采样时每一步都注入 (e_c) 条件（类似 classifier-free guidance）
+4. 最终得到 (x')
+5. 验证器打分：
+
+   * 如果 Score 太低 → 重采样 / 调参（比如提高 guidance scale）
+   * 否则输出 x'
+
+你甚至可以把 validator 的分数直接当作“自适应 guidance”：
+
+* 目标达成度不够 → 提高条件权重
+* 一致性降低太多 → 降低条件权重
+
+这样你就变成一个**闭环的反事实生成系统**，非常有意思。
+
+---
+
+## 6. 轨迹级（Agent）反事实：作为“进阶扩展”
+
+在上面的图像级系统做好以后，你可以加一个简单的 Agent 版本 demo：
+
+* 选一个网页/界面任务
+* 记录：
+
+  * 原始错误轨迹的关键帧（UI截图）
+  * 正确动作序列（你可以手工写一个 gold）
+
+然后：
+
+1. 对出错那一步的界面截图 (x_{t})，用你的 C²D 系统生成“反事实 UI 图” (x'_{t})：
+
+   * 比如把“错误按钮高亮” → 改成“正确按钮高亮”
+   * 或者直接生成一个带高亮+说明的指导图
+
+2. LLM/规则生成替代动作序列 (a'_t)
+
+从而构成一个：
+
+> **“Agent 失败 → 自动生成视觉反事实解释”的工具**
+
+这部分不用写很多代码就能很好看，非常适合作为展示章节。
+
+---
+
+## 7. 这个组合在课题层面怎么写？
+
+你可以这么总结自己的 contribution：
+
+1. **提出了一种一致性约束下的反事实视觉生成框架 C²D：**
+
+   * 在保持原图结构/风格的前提下，最小代价修改关键属性。
+
+2. **引入多目标一致性验证：**
+
+   * 任务目标达成（分类/CLIP/文本一致）
+   * 原图一致性（结构、风格）
+   * 通过 Validator + Rectifier 形成闭环生成。
+
+3. **在通用属性编辑 + 暴力行为场景 + Agent UI 解释上做实验：**
+
+   * 展示反事实生成 + 一致性保证的效果。
+
+4. **与现有 image editing / inpainting / controlnet 做对比，强调：**
+
+   * 他们只做“编辑”，
+   * 你的是“**带一致性与任务约束的反事实生成**”。
+
